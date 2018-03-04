@@ -163,12 +163,27 @@ class ControllerManager implements CSProcess{
 		for ( p in 0..<maxPlayers) toPlayers.append(null)
 		def currentPlayerId = 0
 		def playerMap = [:]
+        def currentPlayerTurn = -1
+
+        def nextPlayerTurn = {
+            if(playerMap.size() == 1) {
+                currentPlayerTurn = 0
+                return
+            }
+
+            currentPlayerTurn++
+
+            if(playerMap.size() < currentPlayerTurn)
+                currentPlayerTurn = 0
+        }
 		
 		createBoard()		
 		dList.set(display)
 		def nPairs = 0
 		def pairsUnclaimed = 0
 		def gameId = 0
+        def currentChosenPairs = []
+
 		while (true) {
 			statusConfig.write("Creating")
 //			nPairs = generatePairsNumber(minPairs, pairsRange)
@@ -194,6 +209,9 @@ class ControllerManager implements CSProcess{
 						toPlayers[currentPlayerId] = playerToChan 
 						toPlayers[currentPlayerId].write(new EnrolDetails(id: currentPlayerId) )
 						playerMap.put(currentPlayerId, [playerName, 0]) // [name, pairs claimed]
+
+                        if(currentPlayerTurn == -1)
+                            currentPlayerTurn = currentPlayerId
 					}
 					else {
 						// no new players can join the game
@@ -204,8 +222,9 @@ class ControllerManager implements CSProcess{
 					def id = ggd.id
 					toPlayers[id].write(new GameDetails( playerDetails: playerMap,
 													 	 pairsSpecification: pairsMap,
-														 gameId: gameId))
-				} else if ( o instanceof ClaimPair) {
+														 gameId: gameId,
+                                                         playerTurn: currentPlayerTurn))
+				} /*else if ( o instanceof ClaimPair) {
 					def claimPair = (ClaimPair)o
 					def gameNo = claimPair.gameId
 					def id = claimPair.id
@@ -227,12 +246,46 @@ class ControllerManager implements CSProcess{
 							pairsUnclaimed = pairsUnclaimed - 1
 							pairsConfig.write(" "+ pairsUnclaimed)
 							running = (pairsUnclaimed != 0)
-						} 
-						else {
-							//println "cannot claim pair: $p1, $p2"
 						}
 					}	
-				} else {
+				}*/ else if(o instanceof TileChosen) {
+					def tile = (TileChosen)o
+
+                    if(gameId == tile.gameId) {
+                        currentChosenPairs.add(o.p)
+
+                        for(int i = 0; i < playerMap.size(); i++) {
+                            if(tile.id != i)
+                                toPlayers[i].write(tile)
+                        }
+                    }
+				} else if(o instanceof PlayerTurnEnded) {
+                    def playerTurnInfo = (PlayerTurnEnded)o
+
+                    if(playerTurnInfo.gameId == gameId) {
+
+                        if(playerTurnInfo.pairClaimed) {
+                            def p1 = currentChosenPairs[0]
+                            def p2 = currentChosenPairs[1]
+                            def id = playerTurnInfo.id
+
+                            pairsMap.remove(p2)
+                            pairsMap.remove(p1)
+
+                            def playerState = playerMap.get(id)
+                            playerState[1] = playerState[1] + 1
+                            pairsWon[id].write(" " + playerState[1])
+                            playerMap.put(id, playerState)
+                            pairsUnclaimed = pairsUnclaimed - 1
+                            pairsConfig.write(" "+ pairsUnclaimed)
+                            running = (pairsUnclaimed != 0)
+                        }
+                        else
+                            nextPlayerTurn()
+
+                        currentChosenPairs.clear()
+                    }
+                } else {
 					def withdraw = (WithdrawFromGame)o
 					def id = withdraw.id
 					def playerState = playerMap.get(id)
