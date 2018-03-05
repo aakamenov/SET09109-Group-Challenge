@@ -1,7 +1,7 @@
 package pairsgame
 
 class PlayerTurnEnded implements Serializable {
-    def gameId
-    def id
+    int gameId
+    int id
     boolean pairClaimed
 }

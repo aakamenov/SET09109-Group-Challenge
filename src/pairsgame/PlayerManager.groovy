@@ -7,6 +7,7 @@ import java.awt.*
 import java.awt.Color.*
 import jcsp.net.*;
 import jcsp.net.tcpip.*;
+import sun.security.mscapi.KeyStore
 import jcsp.net.mobile.*;
 import java.awt.event.*
 
@@ -109,11 +110,11 @@ class PlayerManager implements CSProcess {
 			}
 		}
 		
-		def outerAlt = new ALT([validPoint, withdrawButton])
-		def innerAlt = new ALT([nextButton, withdrawButton])
+		
 		def NEXT = 0
 		def VALIDPOINT = 0
 		def WITHDRAW = 1
+		def UPDATETILE = 2
 		createBoard()
 		dList.set(display)
 		IPlabel.write("What is your name?")
@@ -131,6 +132,8 @@ class PlayerManager implements CSProcess {
 		def toController = NetChannel.any2net(toControllerAddr, 50 )
 		def fromController = NetChannel.net2one()
 		def fromControllerLoc = fromController.getLocation()
+		def outerAlt = new ALT([validPoint, withdrawButton, fromController])
+		def innerAlt = new ALT([nextButton, withdrawButton])
 		
 		// connect to game controller
 		IPconfig.write("Now Connected - sending your name to Controller")
@@ -150,6 +153,8 @@ class PlayerManager implements CSProcess {
 			IPlabel.write("Hi " + playerName + ", you are now enroled in the PAIRS game")
 			IPconfig.write(" ")	
 			
+			
+			
 			// main loop
 			while (enroled) {
 				def chosenPairs = [null, null]
@@ -157,6 +162,7 @@ class PlayerManager implements CSProcess {
 				dList.change (display, 0)
 				toController.write(new GetGameDetails(id: myPlayerId))
 				def gameDetails = (GameDetails)fromController.read()
+				int playerTurn = gameDetails.playerTurn
 				def gameId = gameDetails.gameId
 				IPconfig.write("Playing Game Number - " + gameId)	
 				def playerMap = gameDetails.playerDetails
@@ -173,13 +179,26 @@ class PlayerManager implements CSProcess {
 				pairLocs.each {loc ->
 					changePairs(loc[0], loc[1], Color.LIGHT_GRAY, -1)
 				}
+				
 				def currentPair = 0
 				def notMatched = true
+				
+				
 				while ((chosenPairs[1] == null) && (enroled) && (notMatched)) {
 					getValidPoint.write (new GetValidPoint( side: side,
 															gap: gap,
 															pairsMap: pairsMap))					
 					switch ( outerAlt.select() ) {
+						case UPDATETILE:
+						def o = fromController.read()
+						if(o instanceof TileChosen)
+						{
+							TileChosen tile = (TileChosen) o	
+							changePairs(tile.pos[0], tile.pos[1], tile.color, tile.value)
+						}
+						
+						break
+							
 						case WITHDRAW:	
 							withdrawButton.read()
 							toController.write(new WithdrawFromGame(id: myPlayerId))
@@ -187,10 +206,16 @@ class PlayerManager implements CSProcess {
 							break						
 						case VALIDPOINT:
 							def vPoint = ((SquareCoords)validPoint.read()).location
+							if(playerTurn != myPlayerId) //have to consume the validpoint event, or it will get stuck the click event (in the matcher)
+								break
 							chosenPairs[currentPair] = vPoint
 							currentPair = currentPair + 1
 							def pairData = pairsMap.get(vPoint)
 							changePairs(vPoint[0], vPoint[1], pairData[1], pairData[0])
+							//contact controller every time a valid card is turned
+							TileChosen tile = new TileChosen(gameId: gameId, id: myPlayerId, pos: [vPoint[0],vPoint[1]],
+															 value: pairData[0], color: pairData[1])
+							toController.write(tile)
 							def matchOutcome = pairsMatch(pairsMap, chosenPairs)
 							if ( matchOutcome == 2)  {
 								nextPairConfig.write("SELECT NEXT PAIR")
@@ -213,10 +238,11 @@ class PlayerManager implements CSProcess {
 								} // end inner switch
 							} else if ( matchOutcome == 1) {
 								notMatched = false
-								toController.write(new ClaimPair ( id: myPlayerId,
+								toController.write(new PlayerTurnEnded(gameId: gameId, id: myPlayerId, pairClaimed: true))
+								/*toController.write(new ClaimPair ( id: myPlayerId,
 												   	   			   gameId: gameId,
 																   p1: chosenPairs[0],
-																   p2: chosenPairs[1]))
+																   p2: chosenPairs[1]))*/
 							}
 							break
 					}// end of outer switch	

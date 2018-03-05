@@ -252,7 +252,7 @@ class ControllerManager implements CSProcess{
 					def tile = (TileChosen)o
 
                     if(gameId == tile.gameId) {
-                        currentChosenPairs.add(o.p)
+                        currentChosenPairs.add(o.pos)
 
                         for(int i = 0; i < playerMap.size(); i++) {
                             if(tile.id != i)
