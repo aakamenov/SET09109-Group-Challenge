@@ -126,7 +126,7 @@ class PlayerManager implements CSProcess {
 		IPlabel.write("Connecting to the GameController")
 		
 		// create Node and Net Channel Addresses
-		def nodeAddr = new TCPIPNodeAddress (4000)
+		def nodeAddr = new TCPIPNodeAddress (5000)
 		Node.getInstance().init (nodeAddr)
 		def toControllerAddr = new TCPIPNodeAddress ( controllerIP, 3000)
 		def toController = NetChannel.any2net(toControllerAddr, 50 )
@@ -185,11 +185,16 @@ class PlayerManager implements CSProcess {
 				
 				
 				while ((chosenPairs[1] == null) && (enroled) && (notMatched)) {
-					getValidPoint.write (new GetValidPoint( side: side,
-															gap: gap,
-															pairsMap: pairsMap))					
+					if(playerTurn == myPlayerId)//doing so, I dont think is needed a guard on the altchannels: validpoint will not be called until it s its turn
+					{
+						getValidPoint.write (new GetValidPoint( side: side,
+						gap: gap,
+						pairsMap: pairsMap))
+					}
+					println("player: " + myPlayerId)
 					switch ( outerAlt.select() ) {
 						case UPDATETILE:
+						
 						def o = fromController.read()
 						if(o instanceof TileChosen)
 						{
@@ -198,7 +203,7 @@ class PlayerManager implements CSProcess {
 						}
 						
 						break
-							
+						
 						case WITHDRAW:	
 							withdrawButton.read()
 							toController.write(new WithdrawFromGame(id: myPlayerId))
@@ -233,6 +238,7 @@ class PlayerManager implements CSProcess {
 										chosenPairs = [null, null]
 										currentPair = 0
 										toController.write(new PlayerTurnEnded(gameId: gameId, id: myPlayerId, pairClaimed: false))
+										notMatched = false//TODO:check it! used to get out while
 										break
 									case WITHDRAW:
 										withdrawButton.read()
@@ -241,7 +247,7 @@ class PlayerManager implements CSProcess {
 										break
 								} // end inner switch
 							} else if ( matchOutcome == 1) {
-								notMatched = false
+								
 								toController.write(new PlayerTurnEnded(gameId: gameId, id: myPlayerId, pairClaimed: true))
 								/*toController.write(new ClaimPair ( id: myPlayerId,
 												   	   			   gameId: gameId,
