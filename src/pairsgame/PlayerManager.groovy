@@ -206,15 +206,18 @@ class PlayerManager implements CSProcess {
 							break						
 						case VALIDPOINT:
 							def vPoint = ((SquareCoords)validPoint.read()).location
+							println("vpoint: " + vPoint)
 							if(playerTurn != myPlayerId) //have to consume the validpoint event, or it will get stuck the click event (in the matcher)
 								break
 							chosenPairs[currentPair] = vPoint
 							currentPair = currentPair + 1
 							def pairData = pairsMap.get(vPoint)
+							printf("pairdata: " + pairData)
 							changePairs(vPoint[0], vPoint[1], pairData[1], pairData[0])
 							//contact controller every time a valid card is turned
 							TileChosen tile = new TileChosen(gameId: gameId, id: myPlayerId, pos: [vPoint[0],vPoint[1]],
 															 value: pairData[0], color: pairData[1])
+							println("tile pos: " + tile.pos)
 							toController.write(tile)
 							def matchOutcome = pairsMatch(pairsMap, chosenPairs)
 							if ( matchOutcome == 2)  {
@@ -229,6 +232,7 @@ class PlayerManager implements CSProcess {
 										changePairs(p2[0], p2[1], Color.LIGHT_GRAY, -1)
 										chosenPairs = [null, null]
 										currentPair = 0
+										toController.write(new PlayerTurnEnded(gameId: gameId, id: myPlayerId, pairClaimed: false))
 										break
 									case WITHDRAW:
 										withdrawButton.read()
