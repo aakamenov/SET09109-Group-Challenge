@@ -110,11 +110,10 @@ class PlayerManager implements CSProcess {
 			}
 		}
 		
-		
-		def NEXT = 0
+
 		def VALIDPOINT = 0
 		def WITHDRAW = 1
-		def UPDATETILE = 2
+		def CONTROLLER = 2
 		createBoard()
 		dList.set(display)
 		IPlabel.write("What is your name?")
@@ -133,7 +132,6 @@ class PlayerManager implements CSProcess {
 		def fromController = NetChannel.net2one()
 		def fromControllerLoc = fromController.getLocation()
 		def outerAlt = new ALT([validPoint, withdrawButton, fromController])
-		def innerAlt = new ALT([nextButton, withdrawButton])
 		
 		// connect to game controller
 		IPconfig.write("Now Connected - sending your name to Controller")
@@ -181,10 +179,10 @@ class PlayerManager implements CSProcess {
 				}
 				
 				def currentPair = 0
-				def notMatched = true
+				def turnEnded = true
 				
 				
-				while ((chosenPairs[1] == null) && (enroled) && (notMatched)) {
+				while ((chosenPairs[1] == null) && (enroled) && (turnEnded)) {
 					if(playerTurn == myPlayerId)//doing so, I dont think is needed a guard on the altchannels: validpoint will not be called until it s its turn
 					{
 						getValidPoint.write (new GetValidPoint( side: side,
@@ -193,16 +191,18 @@ class PlayerManager implements CSProcess {
 					}
 					println("player: " + myPlayerId)
 					switch ( outerAlt.select() ) {
-						case UPDATETILE:
-						
-						def o = fromController.read()
-						if(o instanceof TileChosen)
-						{
-							TileChosen tile = (TileChosen) o	
-							changePairs(tile.pos[0], tile.pos[1], tile.color, tile.value)
-						}
-						
-						break
+						case CONTROLLER:
+                            def o = fromController.read()
+                            if(o instanceof TileChosen)
+                            {
+                                TileChosen tile = (TileChosen) o
+                                changePairs(tile.pos[0], tile.pos[1], tile.color, tile.value)
+                            }
+                            else if(o instanceof PlayerTurnEnded) {
+                                def ended = (PlayerTurnEnded)o
+                                turnEnded = ended.id == myPlayerId ? true : false
+                            }
+						    break
 						
 						case WITHDRAW:	
 							withdrawButton.read()
@@ -226,33 +226,10 @@ class PlayerManager implements CSProcess {
 							toController.write(tile)
 							def matchOutcome = pairsMatch(pairsMap, chosenPairs)
 							if ( matchOutcome == 2)  {
-								nextPairConfig.write("SELECT NEXT PAIR")
-								switch (innerAlt.select()){
-									case NEXT:
-										nextButton.read()
-										nextPairConfig.write(" ")
-										def p1 = chosenPairs[0]
-										def p2 = chosenPairs[1]
-										changePairs(p1[0], p1[1], Color.LIGHT_GRAY, -1)
-										changePairs(p2[0], p2[1], Color.LIGHT_GRAY, -1)
-										chosenPairs = [null, null]
-										currentPair = 0
-										toController.write(new PlayerTurnEnded(gameId: gameId, id: myPlayerId, pairClaimed: false))
-										notMatched = false//TODO:check it! used to get out while
-										break
-									case WITHDRAW:
-										withdrawButton.read()
-										toController.write(new WithdrawFromGame(id: myPlayerId))
-										enroled = false
-										break
-								} // end inner switch
+								toController.write(new PlayerTurnEnded(gameId: gameId, id: myPlayerId, pairClaimed: false))
 							} else if ( matchOutcome == 1) {
 								
 								toController.write(new PlayerTurnEnded(gameId: gameId, id: myPlayerId, pairClaimed: true))
-								/*toController.write(new ClaimPair ( id: myPlayerId,
-												   	   			   gameId: gameId,
-																   p1: chosenPairs[0],
-																   p2: chosenPairs[1]))*/
 							}
 							break
 					}// end of outer switch	

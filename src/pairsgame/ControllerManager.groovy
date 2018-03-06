@@ -173,7 +173,7 @@ class ControllerManager implements CSProcess{
 
             currentPlayerTurn++
 
-            if(playerMap.size() < currentPlayerTurn)
+            if(currentPlayerTurn > playerMap.size() - 1)
                 currentPlayerTurn = 0
         }
 		
@@ -224,39 +224,17 @@ class ControllerManager implements CSProcess{
 													 	 pairsSpecification: pairsMap,
 														 gameId: gameId,
                                                          playerTurn: currentPlayerTurn))
-				} /*else if ( o instanceof ClaimPair) {
-					def claimPair = (ClaimPair)o
-					def gameNo = claimPair.gameId
-					def id = claimPair.id
-					def p1 = claimPair.p1
-					def p2 = claimPair.p2
-					if ( gameId == gameNo){
-						if ((pairsMap.get(p1) != null) ) {
-							// pair can be claimed
-							//println "before remove of $p1, $p2"
-							//pairsMap.each {println "$it"}
-							pairsMap.remove(p2)
-							pairsMap.remove(p1)
-							//println "after remove of $p1, $p2"
-							//pairsMap.each {println "$it"}
-							def playerState = playerMap.get(id)
-							playerState[1] = playerState[1] + 1
-							pairsWon[id].write(" " + playerState[1])
-							playerMap.put(id, playerState)
-							pairsUnclaimed = pairsUnclaimed - 1
-							pairsConfig.write(" "+ pairsUnclaimed)
-							running = (pairsUnclaimed != 0)
-						}
-					}	
-				}*/ else if(o instanceof TileChosen) {
+				} else if(o instanceof TileChosen) {
 					def tile = (TileChosen)o
 
                     if(gameId == tile.gameId) {
                         currentChosenPairs.add(o.pos)
 
                         for(int i = 0; i < playerMap.size(); i++) {
-                            if(tile.id != i)
-                                toPlayers[i].write(tile)
+                            def key = playerMap.keySet()[i]
+                            if(tile.id != key) {
+								toPlayers[key].write(tile)
+							}
                         }
                     }
 				} else if(o instanceof PlayerTurnEnded) {
@@ -284,6 +262,14 @@ class ControllerManager implements CSProcess{
                             nextPlayerTurn()
 
                         currentChosenPairs.clear()
+
+						for(int i = 0; i < playerMap.keySet().size(); i++) {
+                            def key = playerMap.keySet()[i]
+							if(playerTurnInfo.id != key) {
+								println "sent"
+								toPlayers[key].write(playerTurnInfo)
+							}
+						}
                     }
                 } else {
 					def withdraw = (WithdrawFromGame)o
@@ -292,9 +278,19 @@ class ControllerManager implements CSProcess{
 					println "Player: ${playerState[0]} claimed ${playerState[1]} pairs"
 					playerNames[id].write("       ")
 					pairsWon[id].write("   ")
-					toPlayers[id] = null
+					def withdrawnPlayer = toPlayers[id]
+                    toPlayers.remove(withdrawnPlayer)
 					availablePlayerIds << id
 					availablePlayerIds =  availablePlayerIds.sort().reverse()
+                    //playerMap.remove(playerState)
+                    def oldTurn = currentPlayerTurn
+                    nextPlayerTurn()
+
+                    for(int i = 0; i < playerMap.keySet().size(); i++) {
+                        def key = playerMap.keySet()[i]
+                        toPlayers[key].write(new PlayerTurnEnded(id: oldTurn))
+                    }
+
 				} // end else if chain
 			} // while running
 			createBoard()
