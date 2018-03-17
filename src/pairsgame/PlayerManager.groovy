@@ -154,8 +154,10 @@ class PlayerManager implements CSProcess {
 				def chosenPairs = [null, null]
 				createBoard()
 				dList.change (display, 0)
+				println("player: " + myPlayerId + " requesting GameDetails")
 				toController.write(new GetGameDetails(id: myPlayerId))
 				def gameDetails = (GameDetails)fromController.read()
+                println("player: " + myPlayerId + " received GameDetails")
 				int playerTurn = gameDetails.playerTurn
 				def gameId = gameDetails.gameId
 				IPconfig.write("Playing Game Number - " + gameId)	
@@ -181,6 +183,7 @@ class PlayerManager implements CSProcess {
 				while ((chosenPairs[1] == null) && (enroled) && (turnEnded)) {
 					if(playerTurn == myPlayerId)//doing so, I dont think is needed a guard on the altchannels: validpoint will not be called until it s its turn
 					{
+                        println("player: " + myPlayerId + " requesting valid point")
 						getValidPoint.write (new GetValidPoint( side: side,
 																gap: gap,
 																pairsMap: pairsMap))
@@ -188,32 +191,37 @@ class PlayerManager implements CSProcess {
 					println("player: " + myPlayerId)
 					switch ( outerAlt.select() ) {
 						case CONTROLLER:
+                            println("player: " + myPlayerId + " requesting from controller")
                             def o = fromController.read()
                             if(o instanceof TileChosen)
                             {
+								println("player: " + myPlayerId + " TileChosen received")
                                 TileChosen tile = (TileChosen) o
                                 changePairs(tile.pos[0], tile.pos[1], tile.color, tile.value)
                             }
                             else if(o instanceof PlayerTurnEnded) {
+								println("player: " + myPlayerId + " PlayerTurnEnded received")
                                 def ended = (PlayerTurnEnded)o
                                 turnEnded = ended.id == myPlayerId ? true : false
+								println("player: " + myPlayerId + " turnEnded:" + turnEnded)
                             }
 						    break
 						
-						case WITHDRAW:	
+						case WITHDRAW:
+							println("player: " + myPlayerId + " withdraw")
 							withdrawButton.read()
 							toController.write(new WithdrawFromGame(id: myPlayerId))
 							enroled = false
 							break						
 						case VALIDPOINT:
+							println("player: " + myPlayerId + " in valid point case")
 							def vPoint = ((SquareCoords)validPoint.read()).location
-							println("vpoint: " + vPoint)
+                            println("player: " + myPlayerId + " received valid point")
 							if(playerTurn != myPlayerId) //have to consume the validpoint event, or it will get stuck the click event (in the matcher)
 								break
 							chosenPairs[currentPair] = vPoint
 							currentPair = currentPair + 1
 							def pairData = pairsMap.get(vPoint)
-							printf("pairdata: " + pairData)
 							changePairs(vPoint[0], vPoint[1], pairData[1], pairData[0])
 							//contact controller every time a valid card is turned
 							TileChosen tile = new TileChosen(gameId: gameId, id: myPlayerId, pos: [vPoint[0],vPoint[1]],

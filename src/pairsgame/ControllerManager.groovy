@@ -233,7 +233,10 @@ class ControllerManager implements CSProcess{
                         for(int i = 0; i < playerMap.size(); i++) {
                             def key = playerMap.keySet()[i]
                             if(tile.id != key) {
-								toPlayers[key].write(tile)
+								def player = toPlayers[key]
+
+                                if(player != null)
+                                    player.write(tile)
 							}
                         }
                     }
@@ -266,8 +269,10 @@ class ControllerManager implements CSProcess{
 						for(int i = 0; i < playerMap.keySet().size(); i++) {
                             def key = playerMap.keySet()[i]
 							if(playerTurnInfo.id != key) {
-								println "sent"
-								toPlayers[key].write(playerTurnInfo)
+                                def player = toPlayers[key]
+
+                                if(player != null)
+								    player.write(playerTurnInfo)
 							}
 						}
                     }
@@ -280,15 +285,23 @@ class ControllerManager implements CSProcess{
 					pairsWon[id].write("   ")
 					def withdrawnPlayer = toPlayers[id]
                     toPlayers.remove(withdrawnPlayer)
+
 					availablePlayerIds << id
 					availablePlayerIds =  availablePlayerIds.sort().reverse()
-                    //playerMap.remove(playerState)
+
+                    playerMap.remove(id)
+
                     def oldTurn = currentPlayerTurn
                     nextPlayerTurn()
 
                     for(int i = 0; i < playerMap.keySet().size(); i++) {
                         def key = playerMap.keySet()[i]
-                        toPlayers[key].write(new PlayerTurnEnded(id: oldTurn))
+						if(id != key) {
+                            def player = toPlayers[key]
+
+                            if(player != null)
+                                player.write(new PlayerTurnEnded(id: oldTurn))
+                        }
                     }
 
 				} // end else if chain
