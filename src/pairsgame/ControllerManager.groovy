@@ -166,15 +166,30 @@ class ControllerManager implements CSProcess{
         def currentPlayerTurn = -1
 
         def nextPlayerTurn = {
-            if(playerMap.size() == 1) {
-                currentPlayerTurn = 0
+            def removeNulls = playerMap.findAll({ el -> el != null})
+
+            if(removeNulls.size() == 1) {
+                currentPlayerTurn = removeNulls.keySet()[0]
                 return
             }
 
-            currentPlayerTurn++
+            def isLastElement = false
+            def index = 0
 
-            if(currentPlayerTurn > playerMap.size() - 1)
-                currentPlayerTurn = 0
+            for (key in removeNulls.keySet()) {
+                if(key == currentPlayerTurn) {
+                    if(index == removeNulls.keySet().size() - 1)
+                        isLastElement = true
+
+                    break
+                }
+                index++
+            }
+
+            if(isLastElement)
+                currentPlayerTurn = removeNulls.keySet()[0]
+            else
+                currentPlayerTurn = removeNulls.keySet()[++index]
         }
 		
 		createBoard()		
