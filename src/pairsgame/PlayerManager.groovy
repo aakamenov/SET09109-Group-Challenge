@@ -19,7 +19,6 @@ class PlayerManager implements CSProcess {
 	ChannelInput IPfield
 	ChannelOutput IPconfig
 	ChannelInput withdrawButton
-	ChannelInput nextButton
 	ChannelOutput getValidPoint
 	ChannelInput validPoint
 	ChannelOutput nextPairConfig
@@ -109,7 +108,6 @@ class PlayerManager implements CSProcess {
 				else  return 2
 			}
 		}
-		
 
 		def VALIDPOINT = 0
 		def WITHDRAW = 1
@@ -150,9 +148,7 @@ class PlayerManager implements CSProcess {
 		else {
 			IPlabel.write("Hi " + playerName + ", you are now enroled in the PAIRS game")
 			IPconfig.write(" ")	
-			
-			
-			
+
 			// main loop
 			while (enroled) {
 				def chosenPairs = [null, null]
@@ -186,8 +182,8 @@ class PlayerManager implements CSProcess {
 					if(playerTurn == myPlayerId)//doing so, I dont think is needed a guard on the altchannels: validpoint will not be called until it s its turn
 					{
 						getValidPoint.write (new GetValidPoint( side: side,
-						gap: gap,
-						pairsMap: pairsMap))
+																gap: gap,
+																pairsMap: pairsMap))
 					}
 					println("player: " + myPlayerId)
 					switch ( outerAlt.select() ) {

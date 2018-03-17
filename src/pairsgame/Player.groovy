@@ -24,7 +24,6 @@ class Player implements CSProcess {
 		def playerNamesOut = new ChannelOutputList(playerNames)
 		def pairsWonIn = new ChannelInputList(pairsWon)
 		def pairsWonOut = new ChannelOutputList(pairsWon)
-		def nextButtonChannel = Channel.createOne2One (new OverWriteOldestBuffer (5))
 		def withdrawButtonChannel = Channel.createOne2One (new OverWriteOldestBuffer (5))
 		def mouseEvent = Channel.createOne2One (new OverWriteOldestBuffer (5))
 		def nextPairConfig = Channel.createOne2One()
@@ -39,7 +38,6 @@ class Player implements CSProcess {
 										   IPconfig: IPfieldConfig.out(),
 										   playerNames: playerNamesOut,
 										   pairsWon: pairsWonOut,
-										   nextButton: nextButtonChannel.in(),
 										   withdrawButton: withdrawButtonChannel.in(),
 										   getValidPoint: getValidPoint.out(),
 										   validPoint: validPoint.in(),
@@ -51,7 +49,6 @@ class Player implements CSProcess {
 											 IPconfig: IPfieldConfig.in(),
 											 playerNames: playerNamesIn,
 											 pairsWon: pairsWonIn,
-										     nextButton: nextButtonChannel.out(),
 										     withdrawButton: withdrawButtonChannel.out(),
 											 mouseEvent: mouseEvent.out(),
 											 nextPairConfig: nextPairConfig.in()

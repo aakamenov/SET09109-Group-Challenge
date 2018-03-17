@@ -13,7 +13,6 @@ class PlayerInterface implements CSProcess{
 	ChannelOutput IPfield
 	ChannelInputList playerNames
 	ChannelInputList pairsWon
-	ChannelOutput nextButton
 	ChannelOutput withdrawButton
 	ChannelOutput mouseEvent
 	ChannelInput nextPairConfig
@@ -25,7 +24,6 @@ class PlayerInterface implements CSProcess{
 		def label = new ActiveLabel(IPlabel)
 		label.setAlignment(Label.RIGHT)
 		def text = new ActiveTextEnterField(IPconfig, IPfield, " ")
-		def continueButton = new ActiveButton(nextPairConfig, nextButton, "                   ")
 		def withdrawButton = new ActiveButton(null, withdrawButton, "Withdraw from Game")
 		
 		gameCanvas.setSize(560, 560)
@@ -40,7 +38,6 @@ class PlayerInterface implements CSProcess{
 		buttonContainer.setLayout(new GridLayout(1,3))
 		buttonContainer.add(withdrawButton)
 		buttonContainer.add(new Label('           '))
-		buttonContainer.add(continueButton)
 		
 		def outcomeContainer = new Container()
 		def maxPlayers = playerNames.size()
@@ -71,7 +68,7 @@ class PlayerInterface implements CSProcess{
 		
 		mainFrame.pack()
 		mainFrame.setVisible(true)	
-		def network = [root, gameCanvas, label, text, withdrawButton, continueButton]	
+		def network = [root, gameCanvas, label, text, withdrawButton]
 		network = network + playerNameSpaces + playerWonSpaces
 		new PAR(network).run()
 	}
