@@ -204,7 +204,12 @@ class PlayerManager implements CSProcess {
                             else if(o instanceof PlayerTurnEnded) {
 								println("player: " + myPlayerId + " PlayerTurnEnded received")
                                 def ended = (PlayerTurnEnded)o
-                                turnEnded = ended.id == myPlayerId ? true : false
+                                turnEnded = ended.id == myPlayerId
+
+								if(turnEnded)
+									validPoint.read() //If someone left the game during the turn,
+                                                      //validPoint has to be consumed to avoid deadlock
+
 								println("player: " + myPlayerId + " turnEnded:" + turnEnded)
                             }
 						    break
@@ -219,8 +224,7 @@ class PlayerManager implements CSProcess {
 							println("player: " + myPlayerId + " in valid point case")
 							def vPoint = ((SquareCoords)validPoint.read()).location
                             println("player: " + myPlayerId + " received valid point")
-//							if(playerTurn != myPlayerId) //have to consume the validpoint event, or it will get stuck the click event (in the matcher)
-//								break
+
 							chosenPairs[currentPair] = vPoint
 							currentPair = currentPair + 1
 							def pairData = pairsMap.get(vPoint)

@@ -159,8 +159,7 @@ class ControllerManager implements CSProcess{
 		def fromPlayersLoc = fromPlayers.getLocation()
 		//println "Controller: fromPlayer channel location - ${fromPlayersLoc.toString()}"
 
-		def toPlayers = new ChannelOutputList()
-		for ( p in 0..<maxPlayers) toPlayers.append(null)
+		def toPlayers = [:]
 		def currentPlayerId = 0
 		def playerMap = [:]
         def currentPlayerTurn = -1
@@ -221,8 +220,8 @@ class ControllerManager implements CSProcess{
 						currentPlayerId = availablePlayerIds. pop()
 						playerNames[currentPlayerId].write(playerName)
 						pairsWon[currentPlayerId].write(" " + 0)
-						toPlayers[currentPlayerId] = playerToChan 
-						toPlayers[currentPlayerId].write(new EnrolDetails(id: currentPlayerId) )
+                        toPlayers.put(currentPlayerId, playerToChan)
+                        toPlayers.get(currentPlayerId).write(new EnrolDetails(id: currentPlayerId) )
 						playerMap.put(currentPlayerId, [playerName, 0]) // [name, pairs claimed]
 
                         if(currentPlayerTurn == -1)
@@ -235,20 +234,26 @@ class ControllerManager implements CSProcess{
 				} else if ( o instanceof GetGameDetails) {
 					def ggd = (GetGameDetails)o
 					def id = ggd.id
-					toPlayers[id].write(new GameDetails( playerDetails: playerMap,
-													 	 pairsSpecification: pairsMap,
-														 gameId: gameId,
-                                                         playerTurn: currentPlayerTurn))
+					def player = toPlayers.get(id)
+
+					if(player != null) {
+                        player.write(new GameDetails(playerDetails: playerMap,
+                                                     pairsSpecification: pairsMap,
+                                                     gameId: gameId,
+                                                     playerTurn: currentPlayerTurn))
+                    }
+
 				} else if(o instanceof TileChosen) {
 					def tile = (TileChosen)o
 
                     if(gameId == tile.gameId) {
                         currentChosenPairs.add(o.pos)
 
-                        for(int i = 0; i < playerMap.size(); i++) {
-                            def key = playerMap.keySet()[i]
+                        for(int i = 0; i < toPlayers.size(); i++) {
+                            def key = toPlayers.keySet()[i]
+
                             if(tile.id != key) {
-								def player = toPlayers[key]
+								def player = toPlayers.get(key)
 
                                 if(player != null)
                                     player.write(tile)
@@ -281,10 +286,11 @@ class ControllerManager implements CSProcess{
 
                         currentChosenPairs.clear()
 
-						for(int i = 0; i < playerMap.keySet().size(); i++) {
-                            def key = playerMap.keySet()[i]
+						for(int i = 0; i < toPlayers.keySet().size(); i++) {
+                            def key = toPlayers.keySet()[i]
+
 							if(playerTurnInfo.id != key) {
-                                def player = toPlayers[key]
+                                def player = toPlayers.get(key)
 
                                 if(player != null)
 								    player.write(playerTurnInfo)
@@ -294,25 +300,23 @@ class ControllerManager implements CSProcess{
                 } else {
 					def withdraw = (WithdrawFromGame)o
 					def id = withdraw.id
-					def playerState = playerMap.get(id)
-					println "Player: ${playerState[0]} claimed ${playerState[1]} pairs"
+
 					playerNames[id].write("       ")
 					pairsWon[id].write("   ")
-					def withdrawnPlayer = toPlayers[id]
-                    toPlayers.remove(withdrawnPlayer)
+
+                    toPlayers.remove(id)
+                    playerMap.remove(id)
 
 					availablePlayerIds << id
 					availablePlayerIds =  availablePlayerIds.sort().reverse()
 
-                    playerMap.remove(id)
-
                     def oldTurn = currentPlayerTurn
                     nextPlayerTurn()
 
-                    for(int i = 0; i < playerMap.keySet().size(); i++) {
-                        def key = playerMap.keySet()[i]
+                    for(int i = 0; i < toPlayers.keySet().size(); i++) {
+                        def key = toPlayers.keySet()[i]
 						if(id != key) {
-                            def player = toPlayers[key]
+                            def player = toPlayers.get(key)
 
                             if(player != null)
                                 player.write(new PlayerTurnEnded(id: oldTurn))
