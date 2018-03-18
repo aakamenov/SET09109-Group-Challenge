@@ -11,29 +11,18 @@ class MouseBuffer implements CSProcess {
 	ChannelOutput sendPoint
 	
 	void run(){
-		def alt = new ALT([getPoint, mouseEvent])
-		def preCon = new boolean[2]
-		def GET = 0
-		preCon[GET] = false
-		preCon[1] = true
-		def point
+
 		
-		while (true){
-			switch ( alt.select(preCon)) {
-				case GET :
-					getPoint.read()
-					sendPoint.write(new MousePoint (point: point))
-					preCon[GET] = false
-					break
-				case 1: // mouse event
-					def mEvent = mouseEvent.read()
-					if (mEvent.getID() == MouseEvent.MOUSE_PRESSED) {
-						preCon[GET] = true
-						def pointValue = mEvent.getPoint()
-						point = [(int)pointValue.x, (int)pointValue.y]
-					}
-					break
-			} // end of switch
-		} // end while
+		while(true) {//as soon a mouse event is triggered, is sent to the matcher which will consume it if it is not from the player manager
+			println("buffer read mouse event")
+			def mEvent = mouseEvent.read()
+			if (mEvent.getID() == MouseEvent.MOUSE_PRESSED) {
+				def pointValue = mEvent.getPoint()
+				def point = [(int)pointValue.x, (int)pointValue.y]
+				println("send to matcher")
+				sendPoint.write(new MousePoint (point: point))
+			}
+		}
+	
 	} // end run
-}
+}	

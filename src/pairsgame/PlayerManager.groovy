@@ -114,6 +114,7 @@ class PlayerManager implements CSProcess {
 		def CONTROLLER = 2
 		createBoard()
 		dList.set(display)
+		def timer = new CSTimer()
 		IPlabel.write("What is your name?")
 		def playerName = IPfield.read()
 		IPconfig.write(" ")
@@ -123,7 +124,7 @@ class PlayerManager implements CSProcess {
 		IPlabel.write("Connecting to the GameController")
 		
 		// create Node and Net Channel Addresses
-		def nodeAddr = new TCPIPNodeAddress (5000)
+		def nodeAddr = new TCPIPNodeAddress (6000)
 		Node.getInstance().init (nodeAddr)
 		def toControllerAddr = new TCPIPNodeAddress ( controllerIP, 3000)
 		def toController = NetChannel.any2net(toControllerAddr, 50 )
@@ -188,6 +189,7 @@ class PlayerManager implements CSProcess {
 																gap: gap,
 																pairsMap: pairsMap))
 					}
+					
 					println("player: " + myPlayerId)
 					switch ( outerAlt.select() ) {
 						case CONTROLLER:
@@ -217,8 +219,8 @@ class PlayerManager implements CSProcess {
 							println("player: " + myPlayerId + " in valid point case")
 							def vPoint = ((SquareCoords)validPoint.read()).location
                             println("player: " + myPlayerId + " received valid point")
-							if(playerTurn != myPlayerId) //have to consume the validpoint event, or it will get stuck the click event (in the matcher)
-								break
+//							if(playerTurn != myPlayerId) //have to consume the validpoint event, or it will get stuck the click event (in the matcher)
+//								break
 							chosenPairs[currentPair] = vPoint
 							currentPair = currentPair + 1
 							def pairData = pairsMap.get(vPoint)
@@ -230,9 +232,10 @@ class PlayerManager implements CSProcess {
 							toController.write(tile)
 							def matchOutcome = pairsMatch(pairsMap, chosenPairs)
 							if ( matchOutcome == 2)  {
+								timer.sleep(1000)
 								toController.write(new PlayerTurnEnded(gameId: gameId, id: myPlayerId, pairClaimed: false))
 							} else if ( matchOutcome == 1) {
-								
+								timer.sleep(1000)
 								toController.write(new PlayerTurnEnded(gameId: gameId, id: myPlayerId, pairClaimed: true))
 							}
 							break

@@ -17,23 +17,34 @@ class Matcher implements CSProcess {
 	
 	void run (){
 		while (true){
-			def getData = (GetValidPoint)getValidPoint.read()
-			def pairsMap = getData.pairsMap
-			def side = getData.side
-			def gap = getData.gap
-			//println  "Matcher - $side, $gap"
-			//pairsMap.each {println"${it}"}
-			def gotValidPoint = false
-			def pointXY 
-			while (!gotValidPoint){
-				getPoint.write(0)
-				def point = ((MousePoint)receivePoint.read()).point
-				pointXY = getXY(point, side, gap)
-				//println  "point = $point; pointXY = $pointXY"
-				if ( pairsMap.containsKey(pointXY)) gotValidPoint = true
+			
+			def alt = new ALT([getValidPoint, receivePoint])
+			
+			switch(alt.select()) {
+				case 0://coming from the playerManager
+					//println("matcher case getValidpoint")
+					def getData = (GetValidPoint)getValidPoint.read()
+					def pairsMap = getData.pairsMap
+					def side = getData.side
+					def gap = getData.gap
+					def gotValidPoint = false
+					def pointXY
+					while (!gotValidPoint){
+						def point = ((MousePoint)receivePoint.read()).point
+						pointXY = getXY(point, side, gap)
+						//println  "point = $point; pointXY = $pointXY"
+						if (pairsMap.containsKey(pointXY)) 
+							gotValidPoint = true
+						}
+						//println("matcher send point to player")
+						validPoint.write(new SquareCoords(location: pointXY))
+					break
+				case 1://comign from the mousebuffer
+					//println("matcher case receivePoint")
+					((MousePoint)receivePoint.read()).point
+					break
 			}
-			//println  "Matcher: pointXY = $pointXY"
-			validPoint.write(new SquareCoords(location: pointXY))
+			
 		} // end while
 		
 	} // end run
